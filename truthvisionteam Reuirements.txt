@@ -1,0 +1,14 @@
+We need to deliver the script to scrape data form:
+https://www.walmart.ca/browse/toys/10011
+It will scrape the following fields if available from each product:
+-UPC
+- Title
+- Every image + Video (highest quality possible)
+- Product Details
+- Product Specs (Spec Name, Content)
+- Product Description With their original HTML formatting. But without the style in the tags.
+- Game Reviews (Name, Images, Comment, Rating)
+-High-quality image URLs
+-the reviews
+-the UPC (in its field)
+The output file will be a JSON format and the script will generate the output in chunks of 100k records max. The proxies will be provided by the client separately if needed.
