@@ -25,17 +25,18 @@ class FlipkartSpider(scrapy.Spider):
         'sec-ch-ua-mobile': '?0',
         'sec-ch-ua-platform': '"Windows"'
     }
+
     custom_settings = {
-        # 'FEED_URI': 'output.csv',
-        # 'FEED_FORMAT': 'csv',
-        'ITEM_PIPELINES': {
-            "flipkart_scraper.pipelines.FlipkartScraperPipeline": 300},
-        'IMAGES_STORE': "IMAGES",
+        'FEED_URI': 'output.csv',
+        'FEED_FORMAT': 'csv',
+        # 'ITEM_PIPELINES': {
+        #     "flipkart_scraper.pipelines.FlipkartScraperPipeline": 300},
+        # 'IMAGES_STORE': "IMAGES",
     }
 
     def start_requests(self):
         links = read_links_from_csv("input.csv");
-        for link in links[:1]:
+        for link in links:
             # print(link)
             list_link = link.get('url')
             print(list_link)
@@ -47,7 +48,9 @@ class FlipkartSpider(scrapy.Spider):
     def parse(self, response):
         product_links = response.xpath('//*[@class="_2UzuFa"]/@href').getall()
         for product_link in product_links:
-            yield response.follow(url=product_link, headers=self.headers, callback=self.productInformation)
+            yield response.follow(
+                url=product_link,
+                headers=self.headers, callback=self.productInformation)
         pagination = response.xpath('//*[@class="yFHi8N"]/a/@href').getall()
         next_page = pagination[-1]
         if next_page:
@@ -55,26 +58,37 @@ class FlipkartSpider(scrapy.Spider):
 
     def productInformation(self, response):
         item = {}
-        item["product_title"] = response.xpath('//*[@class="B_NuCI"]/text()').get()
-        item["product_price"] = response.xpath('//*[@class="_30jeq3 _16Jk6d"]/text()').get()
-        item["product_rating"] = response.xpath('//*[@class="_3LWZlK _3uSWvT"]/text()').get()
-        item["product_colors"] = response.xpath('//*[@class="_30PAEw"]/@src').getall()
-        item["product_size"] = response.xpath('//*[@class="_1fGeJ5 _2UVyXR _31hAvz"]/text()').get()
+        item["bread crumbs"] = ">".join(response.xpath('//*[@class="_2whKao"]/text()').getall())
+        item["title"] = response.xpath('//*[@class="B_NuCI"]/text()').get()
+        item["original_Price"] = response.xpath('//*[@class="_3I9_wc _2p6lqe"]/text()[2]').get()
+        discount_price = response.xpath('//*[@class="_30jeq3 _16Jk6d"]/text()').get()
+        item["discount_price"] = discount_price.strip('₹')
+        discount = response.xpath('//*[@class="_3Ay6Sb _31Dcoz pZkvcx"]/span/text()').get()
+        if discount:
+            item["discount %"] = discount.split('%')[0]
+        item["rating"] = response.xpath('//*[@class="_3LWZlK _3uSWvT"]/text()').get()
+        review = response.xpath('//*[@class="_2_R_DZ"]/span/text()').get()
+        if review:
+            item["rating count"] = review.split()[0]
+        item["colors"] = response.xpath('//*[@class="kmlXmn _31hAvz"]/@href').getall()
+        item["size"] = ",".join(response.xpath('//*[@class="_1fGeJ5 _2UVyXR _31hAvz"]/text()').getall())
+        item["offers"] = ",".join(response.xpath('//*[@class="_16eBzU col"]/span[2]/text()').getall())
+        item["seller"] = response.xpath('//*[@id="sellerName"]/span/span/text()').get()
+        item["seller rating"] = response.xpath('//*[@class="_3LWZlK _1D-8OL"]/text()').get()
+        item["service"] = response.xpath('//*[@class="_2MJMLX"]/text()').get()
+        item["description"] = response.xpath('//*[@class="K4SXrT funtru"]/div/div/div[2]/div[2]/p/text()').getall()
         item["product_images"] = [image.split('?')[0] for image in response.xpath('//*[@class="q6DClP"]/@src').getall()
                                   if '?' in image]
         product_detail_keys = response.xpath('//*[@class="col col-3-12 _2H87wv"]/text()').getall()
         product_detail_values = response.xpath('//*[@class="col col-9-12 _2vZqPX"]/text()').getall()
-        item["product_details"] = create_product_details_dict(product_detail_keys, product_detail_values)
+        item["product_details"] = [item for pair in zip(product_detail_keys, product_detail_values) for item in pair]
+        specs = response.xpath('//*[@class="flxcaE"][1]')
+        if specs:
+            keys = specs.xpath('//*[@class="_1hKmbr col col-3-12"]/text()').getall()
+            values = specs.xpath('//*[@class="_21lJbe"]/text()').getall()
+            merged_list = [item for pair in zip(keys, values) for item in pair]
+            item["specifications"] = ",".join(merged_list)
         yield item
-
-
-def create_product_details_dict(keys, values):
-    product_details_dict = {}
-    for i in range(len(keys)):
-        key = keys[i]
-        value = values[i]
-        product_details_dict[key] = value
-    return product_details_dict
 
 
 def read_links_from_csv(file_path):
