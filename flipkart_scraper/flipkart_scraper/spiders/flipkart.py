@@ -81,14 +81,20 @@ class FlipkartSpider(scrapy.Spider):
                                   if '?' in image]
         product_detail_keys = response.xpath('//*[@class="col col-3-12 _2H87wv"]/text()').getall()
         product_detail_values = response.xpath('//*[@class="col col-9-12 _2vZqPX"]/text()').getall()
-        item["product_details"] = [item for pair in zip(product_detail_keys, product_detail_values) for item in pair]
+        # item["product_details"] = [item for pair in zip(product_detail_keys, product_detail_values) for item in pair]
+        result_list = [f"{key.strip()}: {value}" for key, value in zip(product_detail_keys, product_detail_values)]
+        item["product_details"] = ",".join(result_list)
+        print(item["product_details"])
         specs = response.xpath('//*[@class="flxcaE"][1]')
         if specs:
             keys = specs.xpath('//*[@class="_1hKmbr col col-3-12"]/text()').getall()
             values = specs.xpath('//*[@class="_21lJbe"]/text()').getall()
-            merged_list = [item for pair in zip(keys, values) for item in pair]
-            item["specifications"] = ",".join(merged_list)
+
+            result_list = [f"{key.strip()}: {value}" for key, value in zip(keys, values)]
+            # merged_list = [item for pair in zip(keys, values) for item in pair]
+            item["specifications"] = ",".join(result_list)
         yield item
+        # print(item["specifications"])
 
 
 def read_links_from_csv(file_path):
