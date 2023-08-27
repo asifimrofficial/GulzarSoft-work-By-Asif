@@ -35,7 +35,7 @@ class FlipkartSpider(scrapy.Spider):
     }
 
     def start_requests(self):
-        links = read_links_from_csv("input.csv");
+        links = read_links_from_csv("input.csv")
         for link in links:
             # print(link)
             list_link = link.get('url')
